@@ -109,10 +109,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // and the change type.
             println!("Received notification: {} at {:?} for {} ({}): {}",
                 notification.sequence,
-                match notification.timestamp {
-                    Some(ts) => Some(NaiveDateTime::from_timestamp(ts.seconds, ts.nanos as u32)),
-                    None => None
-                },
+                notification.timestamp.map(|ts| NaiveDateTime::from_timestamp(ts.seconds, ts.nanos as u32)),
                 match message.resource {
                     x if x == EventResources::Unspecified as i32 => "Unspecified",
                     x if x == EventResources::AllResource as i32 => "All",
