@@ -11,8 +11,9 @@ use tonic::transport::Endpoint;
 
 use futures::stream::StreamExt;
 use scienceobjectsdb_rust_api::sciobjectsdb::sciobjsdb::api::notification::services::v1::event_notification_message::UpdateType;
+use scienceobjectsdb_rust_api::sciobjectsdb::sciobjsdb::api::storage::models::v1::Resource;
 
-const ENDPOINT: &str = "https://api.scienceobjectsdb.nfdi-dev.gi.denbi.de/swagger-ui/";
+const ENDPOINT: &str = "https://api.scienceobjectsdb.nfdi-dev.gi.denbi.de";
 // Insert your project id here
 const PROJECT_ID: &str = "TODO";
 // Inser your API token here
@@ -75,12 +76,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // We need a channel to send the initial request and acknowledgements to the server
     let (tx, rx) = tokio::sync::mpsc::channel(8);
 
-    // Initialize the server connection
-    let mut notification_stream = notification_client
-        .notification_stream_group(ReceiverStream::new(rx))
-        .await?
-        .into_inner();
-
     // Send the initial request
     tx.send(NotificationStreamGroupRequest {
         // Do not close the notification stream
@@ -90,7 +85,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             stream_group_id: group_id,
         })),
     })
-    .await?;
+        .await?;
+
+    // Initialize the server connection
+    let mut notification_stream = notification_client
+        .notification_stream_group(ReceiverStream::new(rx))
+        .await?
+        .into_inner();
 
     // Wait and process the notifications until the stream ends or an error is received
     while let Some(Ok(batch)) = notification_stream.next().await {
@@ -111,12 +112,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 notification.sequence,
                 notification.timestamp.map(|ts| NaiveDateTime::from_timestamp(ts.seconds, ts.nanos as u32)),
                 match message.resource {
-                    x if x == EventResources::Unspecified as i32 => "Unspecified",
-                    x if x == EventResources::AllResource as i32 => "All",
-                    x if x == EventResources::ProjectResource as i32 => "Project",
-                    x if x == EventResources::DatasetResource as i32 => "Dataset",
-                    x if x == EventResources::DatasetVersionResource as i32 => "DatasetVersion",
-                    x if x == EventResources::ObjectGroupResource as i32 => "ObjectGroup",
+                    x if x == Resource::Project as i32 => "Project",
+                    x if x == Resource::Dataset as i32 => "Dataset",
+                    x if x == Resource::DatasetVersion as i32 => "DatasetVersion",
+                    x if x == Resource::ObjectGroup as i32 => "ObjectGroup",
+                    x if x == Resource::ObjectGroupRevision as i32 => "ObjectGroupRevision",
+                    x if x == Resource::Object as i32 => "Object",
                     _ => panic!("Unknown resource type")
                 },
                 message.resource_id,
